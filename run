@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+trap 'echo "FAILED: $BASH_COMMAND" >&2' ERR
+
+mkdir -p build
+echo "__________----------GLSLC----------__________"
+glslc shaders/shader.vert -o shaders/vert.spv
+glslc shaders/shader.frag -o shaders/frag.spv
+cd build
+echo "__________----------CMAKE----------__________"
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+echo "__________----------NINJA----------__________"
+ninja
+echo "__________----------RUN----------__________"
+./vkPrac
+cd ..
