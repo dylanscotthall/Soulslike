@@ -19,12 +19,10 @@ public:
                                                        VkSurfaceKHR surface);
 
   void createSwapchain(VkSurfaceKHR surface, Window &window);
-  void recreateSwapchain(VkSurfaceKHR surface, Window &window,
-                         VkRenderPass renderPass);
+  void recreateSwapchain(VkSurfaceKHR surface, Window &window);
   void cleanupSwapChain();
 
   void createImageViews();
-  void createFramebuffers(VkRenderPass renderPass);
 
   VkSwapchainKHR getSwapchain() const noexcept;
   std::vector<VkImage> getSwapchainImages() const noexcept;
@@ -36,9 +34,6 @@ public:
   void resizeSwapchainImageViewsToSwapchainImages() {
     swapchainImageViews.resize(swapchainImages.size());
   }
-  void resizeSwapchainFrameBuffersToSwapchainImageViews() {
-    swapchainFramebuffers.resize(swapchainImageViews.size());
-  }
 
 private:
   VkPhysicalDevice physicalDevice;
@@ -48,5 +43,4 @@ private:
   VkFormat swapchainImageFormat;
   VkExtent2D swapchainExtent;
   std::vector<VkImageView> swapchainImageViews;
-  std::vector<VkFramebuffer> swapchainFramebuffers;
 };

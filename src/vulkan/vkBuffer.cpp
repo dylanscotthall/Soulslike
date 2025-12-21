@@ -18,7 +18,8 @@ uint32_t vBuffer::findMemoryType(uint32_t typeFilter,
   throw std::runtime_error("failed to find suitable memory type!");
 }
 
-vBuffer::vBuffer(VkDevice device, VkPhysicalDevice physicalDevice)
+vBuffer::vBuffer(VkDevice device, VkPhysicalDevice physicalDevice,
+                 std::vector<Vertex> vertices)
     : device(device), physicalDevice(physicalDevice) {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

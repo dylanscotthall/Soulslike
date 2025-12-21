@@ -1,12 +1,12 @@
+#pragma once
 #include "vulkan/surface.h"
 #include "vulkan/vkBuffer.h"
 #include "vulkan/vkCommand.h"
 #include "vulkan/vkDevice.h"
 #include "vulkan/vkFrame.h"
+#include "vulkan/vkInstance.h"
 #include "vulkan/vkPipeline.h"
-#include "vulkan/vkRenderPass.h"
 #include "vulkan/vkSwapchain.h"
-// #include "vulkan/vkInstance.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <iostream>
@@ -40,10 +40,9 @@ private:
   Surface surface;
   vDevice device;
   vSwapchain swapchain;
-  vRenderPass renderPass;
   vPipeline pipeline;
+  vBuffer vertexBuffer;
   vCommand command;
   vFrame frame;
-  vBuffer vertexBuffer;
   uint32_t currentFrame = 0;
 };

@@ -89,6 +89,7 @@ vDevice::vDevice(const vInstance &instance, VkSurfaceKHR surface,
     throw std::runtime_error("failed to find a suitable GPU");
   }
   QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+  queueFamilies = indices;
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
@@ -106,8 +107,14 @@ vDevice::vDevice(const vInstance &instance, VkSurfaceKHR surface,
 
   VkPhysicalDeviceFeatures deviceFeatures{};
 
+  VkPhysicalDeviceVulkan13Features features13{};
+  features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+  features13.dynamicRendering = VK_TRUE;
+  features13.synchronization2 = VK_TRUE;
+
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  createInfo.pNext = &features13;
 
   createInfo.queueCreateInfoCount =
       static_cast<uint32_t>(queueCreateInfos.size());

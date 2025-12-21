@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(vkPrac LANGUAGES CXX)
+project(soulslike LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,7 +28,6 @@ target_sources(
           src/vulkan/surface.cpp
           src/vulkan/vkDevice.cpp
           src/vulkan/vkSwapchain.cpp
-          src/vulkan/vkRenderPass.cpp
           src/vulkan/vkPipeline.cpp
           src/vulkan/vkCommand.cpp
           src/vulkan/vkFrame.cpp

@@ -101,13 +101,17 @@ vInstance::vInstance(bool enableValidationLayers)
   std::vector<const char *> extensions(glfwExtensions,
                                        glfwExtensions + glfwExtensionCount);
 
+  if (enableValidationLayers) {
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
+
   VkApplicationInfo appInfo;
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   appInfo.pApplicationName = "VKPrac";
   appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.pEngineName = "No Engine";
   appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-  appInfo.apiVersion = VK_API_VERSION_1_0;
+  appInfo.apiVersion = VK_API_VERSION_1_3;
   appInfo.pNext = nullptr;
 
   VkInstanceCreateInfo createInfo{};
@@ -120,12 +124,20 @@ vInstance::vInstance(bool enableValidationLayers)
                              : 0;
   createInfo.ppEnabledLayerNames =
       enableValidationLayers ? validationLayers.data() : nullptr;
-  createInfo.pNext = nullptr; // MUST be NULL here
   VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-  populateDebugMessengerCreateInfo(debugCreateInfo);
+  if (enableValidationLayers) {
+    populateDebugMessengerCreateInfo(debugCreateInfo);
+    createInfo.pNext = &debugCreateInfo;
+  } else {
+    createInfo.pNext = nullptr;
+  }
 
   if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
     throw std::runtime_error("failed to create instance!");
+  }
+
+  if (enableValidationLayers) {
+    setupDebugMessenger();
   }
 }
 

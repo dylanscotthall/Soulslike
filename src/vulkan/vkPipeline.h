@@ -35,22 +35,21 @@ struct Vertex {
   }
 };
 
-const std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {0.5f, 0.0f, 0.5f}},
-                                      {{0.5f, 0.5f}, {1.0f, 0.6f, 0.0f}},
-                                      {{-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}};
-
 class vPipeline {
 public:
-  vPipeline(VkDevice device, VkRenderPass renderPass);
+  vPipeline(VkDevice device, VkFormat swapchainImageFormat);
   ~vPipeline();
 
   VkShaderModule createShaderModule(const std::vector<char> &code);
 
   VkPipeline getGraphicsPipeline() const noexcept;
 
+  std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {0.5f, 0.0f, 0.5f}},
+                                  {{0.5f, 0.5f}, {1.0f, 0.6f, 0.0f}},
+                                  {{-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}};
+
 private:
-  VkDevice &device;
-  VkRenderPass renderPass;
+  VkDevice device;
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
 };

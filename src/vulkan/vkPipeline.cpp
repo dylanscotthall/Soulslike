@@ -35,8 +35,8 @@ VkShaderModule vPipeline::createShaderModule(const std::vector<char> &code) {
   return shaderModule;
 }
 
-vPipeline::vPipeline(VkDevice device, VkRenderPass renderPass)
-    : device(device), renderPass(renderPass) {
+vPipeline::vPipeline(VkDevice device, VkFormat swapchainImageFormat)
+    : device(device) {
   auto vertShaderCode = readFile("shaders/vert.spv");
   auto fragShaderCode = readFile("shaders/frag.spv");
 
@@ -134,6 +134,15 @@ vPipeline::vPipeline(VkDevice device, VkRenderPass renderPass)
     throw std::runtime_error("failed to create pipeline layout!");
   }
 
+  VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
+  pipelineRenderingInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  pipelineRenderingInfo.colorAttachmentCount = 1;
+  pipelineRenderingInfo.pColorAttachmentFormats = &swapchainImageFormat;
+  // Optional: depth/stencil formats
+  // pipelineRenderingInfo.depthAttachmentFormat = depthFormat;
+  // pipelineRenderingInfo.stencilAttachmentFormat = stencilFormat;
+
   VkGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount = 2;
@@ -148,10 +157,11 @@ vPipeline::vPipeline(VkDevice device, VkRenderPass renderPass)
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
   pipelineInfo.layout = pipelineLayout;
-  pipelineInfo.renderPass = renderPass;
+  pipelineInfo.renderPass = VK_NULL_HANDLE;
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
   pipelineInfo.basePipelineIndex = -1;              // Optional
+  pipelineInfo.pNext = &pipelineRenderingInfo;
 
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                 nullptr, &graphicsPipeline) != VK_SUCCESS) {

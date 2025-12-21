@@ -13,8 +13,8 @@ public:
   void createCommandBuffers(VkDevice device, const int MAX_FRAMES_IN_FLIGHT);
 
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
-                           VkRenderPass renderPass, vSwapchain &swapchain,
-                           vPipeline &pipeline, VkBuffer vertexBuffer);
+                           vSwapchain &swapchain, vPipeline &pipeline,
+                           VkBuffer vertexBuffer);
 
   VkCommandPool getCommandPool() const noexcept;
   std::vector<VkCommandBuffer> &getCommandBuffers() noexcept;

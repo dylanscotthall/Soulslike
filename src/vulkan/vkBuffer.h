@@ -1,9 +1,12 @@
 #pragma once
 
+#include "vkPipeline.h"
+#include <vector>
 #include <vulkan/vulkan_core.h>
 class vBuffer {
 public:
-  vBuffer(VkDevice device, VkPhysicalDevice physicalDevice);
+  vBuffer(VkDevice device, VkPhysicalDevice physicalDevice,
+          std::vector<Vertex> vertices);
   ~vBuffer();
 
   uint32_t findMemoryType(uint32_t typeFilter,

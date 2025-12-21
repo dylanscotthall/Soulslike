@@ -4,25 +4,25 @@
 #include "vkSwapchain.h"
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
 class vFrame {
 public:
-  vFrame(vDevice &device);
+  vFrame(vDevice &device, VkSwapchainKHR swapchain, int maxFramesInFlight = 2);
   ~vFrame();
 
-  void drawFrame(uint32_t currentFrame, vSwapchain &swapchain,
-                 VkSurfaceKHR surface, VkRenderPass renderPass, Window &window,
-                 VkBuffer vertexBuffer, vCommand &command, vPipeline &pipeline);
+  void drawFrame(uint32_t &currentFrame, vSwapchain &swapchain,
+                 VkSurfaceKHR surface, Window &window, VkBuffer vertexBuffer,
+                 vCommand &command, vPipeline &pipeline);
 
-  std::vector<VkSemaphore> getImageAvailableSemaphores() const noexcept;
-  std::vector<VkSemaphore> getRenderFinishedSemaphores() const noexcept;
-  std::vector<VkFence> getInFlightFences() const noexcept;
-  const int getMaxFramesInFlight() const noexcept;
+  int getMaxFramesInFlight() const noexcept { return MAX_FRAMES_IN_FLIGHT; }
 
 private:
   vDevice &device;
-  std::vector<VkSemaphore> imageAvailableSemaphores;
-  std::vector<VkSemaphore> renderFinishedSemaphores;
-  std::vector<VkFence> inFlightFences;
 
-  const int MAX_FRAMES_IN_FLIGHT = 2;
+  int MAX_FRAMES_IN_FLIGHT;
+
+  std::vector<VkFence> inFlightFences;               // one per frame in flight
+  std::vector<VkFence> imagesInFlight;               // tracks per-image fence
+  std::vector<VkSemaphore> renderFinishedSemaphores; // per-image
+  std::vector<VkSemaphore> imageAvailableSemaphores; // per-image
 };

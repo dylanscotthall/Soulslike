@@ -12,5 +12,5 @@ cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug
 echo "__________----------NINJA----------__________"
 ninja
 echo "__________----------RUN----------__________"
-./vkPrac
+./soulslike
 cd ..
