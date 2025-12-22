@@ -41,8 +41,9 @@ private:
   vDevice device;
   vSwapchain swapchain;
   vPipeline pipeline;
-  vBuffer vertexBuffer;
   vCommand command;
+  vBuffer vertexBuffer;
+  vBuffer indexBuffer;
   vFrame frame;
   uint32_t currentFrame = 0;
 };

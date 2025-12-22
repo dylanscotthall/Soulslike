@@ -38,7 +38,8 @@ void vCommand::createCommandBuffers(VkDevice device,
 
 void vCommand::recordCommandBuffer(VkCommandBuffer commandBuffer,
                                    uint32_t imageIndex, vSwapchain &swapchain,
-                                   vPipeline &pipeline, VkBuffer vertexBuffer) {
+                                   vPipeline &pipeline, VkBuffer vertexBuffer,
+                                   VkBuffer indexBuffer) {
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -101,9 +102,10 @@ void vCommand::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
+  vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-  vkCmdDraw(commandBuffer, static_cast<uint32_t>(pipeline.vertices.size()), 1,
-            0, 0);
+  vkCmdDrawIndexed(commandBuffer,
+                   static_cast<uint32_t>(pipeline.indices.size()), 1, 0, 0, 0);
 
   vkCmdEndRendering(commandBuffer);
 

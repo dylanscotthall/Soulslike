@@ -14,7 +14,7 @@ public:
 
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
                            vSwapchain &swapchain, vPipeline &pipeline,
-                           VkBuffer vertexBuffer);
+                           VkBuffer vertexBuffer, VkBuffer indexBuffer);
 
   VkCommandPool getCommandPool() const noexcept;
   std::vector<VkCommandBuffer> &getCommandBuffers() noexcept;

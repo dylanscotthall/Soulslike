@@ -39,8 +39,8 @@ vFrame::vFrame(vDevice &device, VkSwapchainKHR swapchain, int maxFramesInFlight)
 
 void vFrame::drawFrame(uint32_t &currentFrame, vSwapchain &swapchain,
                        VkSurfaceKHR surface, Window &window,
-                       VkBuffer vertexBuffer, vCommand &command,
-                       vPipeline &pipeline) {
+                       VkBuffer vertexBuffer, VkBuffer indexBuffer,
+                       vCommand &command, vPipeline &pipeline) {
 
   // Wait for the current frame to finish
   vkWaitForFences(device.getLogical(), 1, &inFlightFences[currentFrame],
@@ -74,7 +74,8 @@ void vFrame::drawFrame(uint32_t &currentFrame, vSwapchain &swapchain,
   // Record commands for this frame/image
   vkResetCommandBuffer(command.getCommandBuffers()[currentFrame], 0);
   command.recordCommandBuffer(command.getCommandBuffers()[currentFrame],
-                              imageIndex, swapchain, pipeline, vertexBuffer);
+                              imageIndex, swapchain, pipeline, vertexBuffer,
+                              indexBuffer);
 
   // Submit command buffer
   VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};

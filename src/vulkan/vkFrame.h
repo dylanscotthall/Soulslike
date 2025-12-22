@@ -12,7 +12,7 @@ public:
 
   void drawFrame(uint32_t &currentFrame, vSwapchain &swapchain,
                  VkSurfaceKHR surface, Window &window, VkBuffer vertexBuffer,
-                 vCommand &command, vPipeline &pipeline);
+                 VkBuffer indexBuffer, vCommand &command, vPipeline &pipeline);
 
   int getMaxFramesInFlight() const noexcept { return MAX_FRAMES_IN_FLIGHT; }
 

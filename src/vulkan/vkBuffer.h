@@ -1,22 +1,34 @@
 #pragma once
 
-#include "vkPipeline.h"
-#include <vector>
-#include <vulkan/vulkan_core.h>
+#include "vkDevice.h"
+#include <vulkan/vulkan.h>
+
 class vBuffer {
 public:
-  vBuffer(VkDevice device, VkPhysicalDevice physicalDevice,
-          std::vector<Vertex> vertices);
+  vBuffer(vDevice &device, VkCommandPool commandPool);
   ~vBuffer();
 
-  uint32_t findMemoryType(uint32_t typeFilter,
-                          VkMemoryPropertyFlags properties);
+  // non-copyable
+  vBuffer(const vBuffer &) = delete;
+  vBuffer &operator=(const vBuffer &) = delete;
 
-  VkBuffer get() const noexcept;
+  void create(VkDeviceSize size, VkBufferUsageFlags usage,
+              VkMemoryPropertyFlags properties);
+
+  void uploadViaStaging(const void *data, VkDeviceSize size);
+
+  VkBuffer get() const noexcept { return buffer; }
+  VkDeviceSize getSize() const noexcept { return size; }
 
 private:
-  VkDevice device;
-  VkPhysicalDevice physicalDevice;
-  VkBuffer vertexBuffer;
-  VkDeviceMemory vertexBufferMemory;
+  uint32_t findMemoryType(uint32_t typeFilter,
+                          VkMemoryPropertyFlags properties);
+  void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+
+private:
+  VkCommandPool commandPool;
+  vDevice &device;
+  VkBuffer buffer{VK_NULL_HANDLE};
+  VkDeviceMemory memory{VK_NULL_HANDLE};
+  VkDeviceSize size{0};
 };
