@@ -1,15 +1,17 @@
 #pragma once
-#include "vulkan/surface.h"
-#include "vulkan/vkBuffer.h"
-#include "vulkan/vkCommand.h"
-#include "vulkan/vkDevice.h"
-#include "vulkan/vkFrame.h"
-#include "vulkan/vkInstance.h"
-#include "vulkan/vkPipeline.h"
-#include "vulkan/vkSwapchain.h"
+#include "renderer/backend/buffer.h"
+#include "renderer/backend/command.h"
+#include "renderer/backend/device.h"
+#include "renderer/backend/frame.h"
+#include "renderer/backend/instance.h"
+#include "renderer/backend/pipeline.h"
+#include "renderer/backend/surface.h"
+#include "renderer/backend/swapchain.h"
+#include "renderer/renderer.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -36,14 +38,14 @@ private:
 
 private:
   Window window;
-  vInstance instance;
+  Instance instance;
   Surface surface;
-  vDevice device;
-  vSwapchain swapchain;
-  vPipeline pipeline;
-  vCommand command;
-  vBuffer vertexBuffer;
-  vBuffer indexBuffer;
-  vFrame frame;
-  uint32_t currentFrame = 0;
+  Device device;
+  Swapchain swapchain;
+  Pipeline pipeline;
+  Command command;
+  Frame frame;
+  Renderer renderer;
+  std::vector<std::unique_ptr<Mesh>> meshes;
+  std::vector<RenderItem> renderItems;
 };

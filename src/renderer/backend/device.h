@@ -1,5 +1,5 @@
 #pragma once
-#include "vkInstance.h"
+#include "instance.h"
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -13,15 +13,18 @@ struct QueueFamilyIndices {
   }
 };
 
-class vDevice {
+class Device {
 public:
-  vDevice(const vInstance &instance, VkSurfaceKHR surface,
-          bool enableValidationLayers);
-  ~vDevice();
+  Device(const Instance &instance, VkSurfaceKHR surface,
+         bool enableValidationLayers);
+  ~Device();
 
   bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
   static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
                                               VkSurfaceKHR surface);
+
+  uint32_t findMemoryType(uint32_t typeFilter,
+                          VkMemoryPropertyFlags properties);
 
   bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
 

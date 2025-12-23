@@ -1,4 +1,4 @@
-#include "vkPipeline.h"
+#include "pipeline.h"
 #include <fstream>
 
 static std::vector<char> readFile(const std::string &filename) {
@@ -16,11 +16,11 @@ static std::vector<char> readFile(const std::string &filename) {
   return buffer;
 }
 
-VkPipeline vPipeline::getGraphicsPipeline() const noexcept {
+VkPipeline Pipeline::getGraphicsPipeline() const noexcept {
   return graphicsPipeline;
 }
 
-VkShaderModule vPipeline::createShaderModule(const std::vector<char> &code) {
+VkShaderModule Pipeline::createShaderModule(const std::vector<char> &code) {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size();
@@ -35,7 +35,7 @@ VkShaderModule vPipeline::createShaderModule(const std::vector<char> &code) {
   return shaderModule;
 }
 
-vPipeline::vPipeline(VkDevice device, VkFormat swapchainImageFormat)
+Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
     : device(device) {
   auto vertShaderCode = readFile("shaders/vert.spv");
   auto fragShaderCode = readFile("shaders/frag.spv");
@@ -140,7 +140,9 @@ vPipeline::vPipeline(VkDevice device, VkFormat swapchainImageFormat)
   pipelineRenderingInfo.colorAttachmentCount = 1;
   pipelineRenderingInfo.pColorAttachmentFormats = &swapchainImageFormat;
   // Optional: depth/stencil formats
-  // pipelineRenderingInfo.depthAttachmentFormat = depthFormat;
+  // TODO: Change this bitch to the getter from swapchain once im not a dumb
+  // cunt
+  pipelineRenderingInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
   // pipelineRenderingInfo.stencilAttachmentFormat = stencilFormat;
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -148,12 +150,21 @@ vPipeline::vPipeline(VkDevice device, VkFormat swapchainImageFormat)
   pipelineInfo.stageCount = 2;
   pipelineInfo.pStages = shaderStages;
 
+  VkPipelineDepthStencilStateCreateInfo depthStencil{};
+  depthStencil.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depthStencil.depthTestEnable = VK_TRUE;
+  depthStencil.depthWriteEnable = VK_TRUE;
+  depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+  depthStencil.depthBoundsTestEnable = VK_FALSE;
+  depthStencil.stencilTestEnable = VK_FALSE;
+
   pipelineInfo.pVertexInputState = &vertexInputInfo;
   pipelineInfo.pInputAssemblyState = &inputAssembly;
   pipelineInfo.pViewportState = &viewportState;
   pipelineInfo.pRasterizationState = &rasterizer;
   pipelineInfo.pMultisampleState = &multisampling;
-  pipelineInfo.pDepthStencilState = nullptr; // Optional
+  pipelineInfo.pDepthStencilState = &depthStencil;
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
   pipelineInfo.layout = pipelineLayout;
@@ -172,7 +183,7 @@ vPipeline::vPipeline(VkDevice device, VkFormat swapchainImageFormat)
   vkDestroyShaderModule(device, vertShaderModule, nullptr);
 }
 
-vPipeline::~vPipeline() {
+Pipeline::~Pipeline() {
   vkDestroyPipeline(device, graphicsPipeline, nullptr);
   vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 }

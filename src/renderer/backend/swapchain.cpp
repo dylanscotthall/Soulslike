@@ -1,12 +1,12 @@
-#include "vkSwapchain.h"
+#include "swapchain.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 SwapchainSupportDetails
-vSwapchain::querySwapchainSupport(VkPhysicalDevice device,
-                                  VkSurfaceKHR surface) {
+Swapchain::querySwapchainSupport(VkPhysicalDevice device,
+                                 VkSurfaceKHR surface) {
   SwapchainSupportDetails details;
 
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
@@ -77,9 +77,9 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
   }
 }
 
-void vSwapchain::createSwapchain(VkSurfaceKHR surface, Window &window) {
+void Swapchain::createSwapchain(VkSurfaceKHR surface, Window &window) {
   SwapchainSupportDetails swapChainSupport =
-      querySwapchainSupport(physicalDevice, surface);
+      querySwapchainSupport(device.getPhysical(), surface);
 
   VkSurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -107,7 +107,7 @@ void vSwapchain::createSwapchain(VkSurfaceKHR surface, Window &window) {
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
   QueueFamilyIndices indices =
-      vDevice::findQueueFamilies(physicalDevice, surface);
+      Device::findQueueFamilies(device.getPhysical(), surface);
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(),
                                    indices.presentFamily.value()};
 
@@ -127,33 +127,34 @@ void vSwapchain::createSwapchain(VkSurfaceKHR surface, Window &window) {
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) !=
-      VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(device.getLogical(), &createInfo, nullptr,
+                           &swapchain) != VK_SUCCESS) {
     throw std::runtime_error("failed to create swap chain!");
   }
 
-  vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+  vkGetSwapchainImagesKHR(device.getLogical(), swapchain, &imageCount, nullptr);
   swapchainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(device, swapchain, &imageCount,
+  vkGetSwapchainImagesKHR(device.getLogical(), swapchain, &imageCount,
                           swapchainImages.data());
 }
 
-void vSwapchain::recreateSwapchain(VkSurfaceKHR surface, Window &window) {
+void Swapchain::recreateSwapchain(VkSurfaceKHR surface, Window &window) {
   auto [width, height] = window.framebufferSize();
   while (width == 0 || height == 0) {
     std::tie(width, height) = window.framebufferSize();
     window.waitEvents();
   }
-  vkDeviceWaitIdle(device);
+  vkDeviceWaitIdle(device.getLogical());
 
   cleanupSwapChain();
 
   createSwapchain(surface, window);
   createImageViews();
+  createDepthResources();
 }
 
-void vSwapchain::createImageViews() {
-  vSwapchain::resizeSwapchainImageViewsToSwapchainImages();
+void Swapchain::createImageViews() {
+  Swapchain::resizeSwapchainImageViewsToSwapchainImages();
 
   for (size_t i = 0; i < swapchainImages.size(); i++) {
     VkImageViewCreateInfo createInfo{};
@@ -171,38 +172,102 @@ void vSwapchain::createImageViews() {
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device, &createInfo, nullptr,
+    if (vkCreateImageView(device.getLogical(), &createInfo, nullptr,
                           &swapchainImageViews[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create image views!");
     }
   }
 }
+void Swapchain::createDepthResources() {
+  VkImageCreateInfo imageInfo{};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = swapchainExtent.width;
+  imageInfo.extent.height = swapchainExtent.height;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.format = depthFormat;
+  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-vSwapchain::~vSwapchain() {}
-
-void vSwapchain::cleanupSwapChain() {
-  for (auto imageView : swapchainImageViews) {
-    vkDestroyImageView(device, imageView, nullptr);
+  if (vkCreateImage(device.getLogical(), &imageInfo, nullptr, &depthImage) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to create depth image");
   }
 
-  vkDestroySwapchainKHR(device, swapchain, nullptr);
+  VkMemoryRequirements memReq;
+  vkGetImageMemoryRequirements(device.getLogical(), depthImage, &memReq);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memReq.size;
+  allocInfo.memoryTypeIndex = device.findMemoryType(
+      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  if (vkAllocateMemory(device.getLogical(), &allocInfo, nullptr,
+                       &depthMemory) != VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate depth memory");
+  }
+
+  vkBindImageMemory(device.getLogical(), depthImage, depthMemory, 0);
+
+  VkImageViewCreateInfo viewInfo{};
+  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.image = depthImage;
+  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.format = depthFormat;
+  viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  viewInfo.subresourceRange.baseMipLevel = 0;
+  viewInfo.subresourceRange.levelCount = 1;
+  viewInfo.subresourceRange.baseArrayLayer = 0;
+  viewInfo.subresourceRange.layerCount = 1;
+
+  if (vkCreateImageView(device.getLogical(), &viewInfo, nullptr,
+                        &depthImageView) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create depth image view");
+  }
 }
 
-vSwapchain::vSwapchain(vDevice &device, VkSurfaceKHR surface, Window &window)
-    : physicalDevice(device.getPhysical()), device(device.getLogical()) {
-  vSwapchain::createSwapchain(surface, window);
+Swapchain::~Swapchain() {}
+
+void Swapchain::cleanupSwapChain() {
+  for (auto imageView : swapchainImageViews) {
+    vkDestroyImageView(device.getLogical(), imageView, nullptr);
+  }
+
+  vkDestroySwapchainKHR(device.getLogical(), swapchain, nullptr);
+  vkDestroyImageView(device.getLogical(), depthImageView, nullptr);
+  vkDestroyImage(device.getLogical(), depthImage, nullptr);
+  vkFreeMemory(device.getLogical(), depthMemory, nullptr);
 }
 
-VkSwapchainKHR vSwapchain::getSwapchain() const noexcept { return swapchain; }
-std::vector<VkImage> vSwapchain::getSwapchainImages() const noexcept {
+Swapchain::Swapchain(Device &device, VkSurfaceKHR surface, Window &window)
+    : device(device) {
+  createSwapchain(surface, window);
+  createImageViews();
+  createDepthResources();
+}
+
+VkSwapchainKHR Swapchain::getSwapchain() const noexcept { return swapchain; }
+std::vector<VkImage> Swapchain::getSwapchainImages() const noexcept {
   return swapchainImages;
 }
-VkFormat vSwapchain::getSwapchainImageFormat() const noexcept {
+VkFormat Swapchain::getSwapchainImageFormat() const noexcept {
   return swapchainImageFormat;
 }
-VkExtent2D vSwapchain::getSwapchainExtent() const noexcept {
+VkExtent2D Swapchain::getSwapchainExtent() const noexcept {
   return swapchainExtent;
 }
-std::vector<VkImageView> vSwapchain::getSwapchainImageViews() const noexcept {
+std::vector<VkImageView> Swapchain::getSwapchainImageViews() const noexcept {
   return swapchainImageViews;
 }
+VkImageView Swapchain::getDepthImageView() const noexcept {
+  return depthImageView;
+}
+
+VkImage Swapchain::getDepthImage() const noexcept { return depthImage; }
+VkFormat Swapchain::getDepthFormat() const noexcept { return depthFormat; }

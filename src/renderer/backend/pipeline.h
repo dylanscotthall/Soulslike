@@ -35,10 +35,10 @@ struct Vertex {
   }
 };
 
-class vPipeline {
+class Pipeline {
 public:
-  vPipeline(VkDevice device, VkFormat swapchainImageFormat);
-  ~vPipeline();
+  Pipeline(VkDevice device, VkFormat swapchainImageFormat);
+  ~Pipeline();
 
   VkShaderModule createShaderModule(const std::vector<char> &code);
 

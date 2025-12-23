@@ -1,11 +1,11 @@
-#include "vkDevice.h"
-#include "vkSwapchain.h"
+#include "device.h"
+#include "swapchain.h"
 #include <set>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-QueueFamilyIndices vDevice::findQueueFamilies(VkPhysicalDevice device,
-                                              VkSurfaceKHR surface) {
+QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device,
+                                             VkSurfaceKHR surface) {
   QueueFamilyIndices indices;
 
   uint32_t queueFamilyCount = 0;
@@ -35,7 +35,7 @@ QueueFamilyIndices vDevice::findQueueFamilies(VkPhysicalDevice device,
   return indices;
 }
 
-bool vDevice::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
+bool Device::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
   uint32_t extensionCount;
   vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
                                        nullptr);
@@ -53,7 +53,7 @@ bool vDevice::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
   return requiredExtensions.empty();
 }
 
-bool vDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+bool Device::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
   QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
   bool extensionsSupported = checkDeviceExtensionsSupport(device);
@@ -61,7 +61,7 @@ bool vDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
   bool swapChainAdequate = false;
   if (extensionsSupported) {
     SwapchainSupportDetails swapChainSupport =
-        vSwapchain::querySwapchainSupport(device, surface);
+        Swapchain::querySwapchainSupport(device, surface);
     swapChainAdequate = !swapChainSupport.formats.empty() &&
                         !swapChainSupport.presentModes.empty();
   }
@@ -69,8 +69,23 @@ bool vDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
   return indices.isComplete() && extensionsSupported && swapChainAdequate;
 }
 
-vDevice::vDevice(const vInstance &instance, VkSurfaceKHR surface,
-                 bool enableValidationLayers) {
+uint32_t Device::findMemoryType(uint32_t typeFilter,
+                                VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
+                                    properties) == properties) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("Failed to find suitable memory type");
+}
+
+Device::Device(const Instance &instance, VkSurfaceKHR surface,
+               bool enableValidationLayers) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance.getInstance(), &deviceCount, nullptr);
   if (deviceCount == 0) {
@@ -143,12 +158,12 @@ vDevice::vDevice(const vInstance &instance, VkSurfaceKHR surface,
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
-vDevice::~vDevice() { vkDestroyDevice(device, nullptr); }
+Device::~Device() { vkDestroyDevice(device, nullptr); }
 
-VkDevice vDevice::getLogical() const noexcept { return device; }
-VkPhysicalDevice vDevice::getPhysical() const noexcept {
+VkDevice Device::getLogical() const noexcept { return device; }
+VkPhysicalDevice Device::getPhysical() const noexcept {
   return physicalDevice;
 };
-QueueFamilyIndices &vDevice::getQueues() noexcept { return queueFamilies; }
-VkQueue vDevice::getGraphicsQueue() const noexcept { return graphicsQueue; }
-VkQueue vDevice::getPresentQueue() const noexcept { return presentQueue; }
+QueueFamilyIndices &Device::getQueues() noexcept { return queueFamilies; }
+VkQueue Device::getGraphicsQueue() const noexcept { return graphicsQueue; }
+VkQueue Device::getPresentQueue() const noexcept { return presentQueue; }

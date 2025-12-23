@@ -1,16 +1,16 @@
 #pragma once
 
-#include "vkDevice.h"
+#include "device.h"
 #include <vulkan/vulkan.h>
 
-class vBuffer {
+class Buffer {
 public:
-  vBuffer(vDevice &device, VkCommandPool commandPool);
-  ~vBuffer();
+  Buffer(Device &device, VkCommandPool commandPool);
+  ~Buffer();
 
   // non-copyable
-  vBuffer(const vBuffer &) = delete;
-  vBuffer &operator=(const vBuffer &) = delete;
+  Buffer(const Buffer &) = delete;
+  Buffer &operator=(const Buffer &) = delete;
 
   void create(VkDeviceSize size, VkBufferUsageFlags usage,
               VkMemoryPropertyFlags properties);
@@ -21,13 +21,11 @@ public:
   VkDeviceSize getSize() const noexcept { return size; }
 
 private:
-  uint32_t findMemoryType(uint32_t typeFilter,
-                          VkMemoryPropertyFlags properties);
   void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
 private:
   VkCommandPool commandPool;
-  vDevice &device;
+  Device &device;
   VkBuffer buffer{VK_NULL_HANDLE};
   VkDeviceMemory memory{VK_NULL_HANDLE};
   VkDeviceSize size{0};

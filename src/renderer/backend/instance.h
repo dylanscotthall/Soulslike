@@ -2,10 +2,10 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-class vInstance {
+class Instance {
 public:
-  vInstance(bool enableValidationLayers);
-  ~vInstance();
+  Instance(bool enableValidationLayers);
+  ~Instance();
 
   const std::vector<const char *> &getValidationLayers() const;
   VkInstance getInstance() const noexcept;

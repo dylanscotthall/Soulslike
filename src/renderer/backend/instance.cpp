@@ -1,10 +1,10 @@
-#include "vkInstance.h"
+#include "instance.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <iostream>
 
-bool vInstance::checkValidationLayerSupport() {
+bool Instance::checkValidationLayerSupport() {
   uint32_t layerCount;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -76,7 +76,7 @@ void populateDebugMessengerCreateInfo(
   createInfo.pfnUserCallback = debugCallback;
 }
 
-void vInstance::setupDebugMessenger() {
+void Instance::setupDebugMessenger() {
   if (!enableValidationLayers)
     return;
   VkDebugUtilsMessengerCreateInfoEXT createInfo;
@@ -88,7 +88,7 @@ void vInstance::setupDebugMessenger() {
   }
 }
 
-vInstance::vInstance(bool enableValidationLayers)
+Instance::Instance(bool enableValidationLayers)
     : enableValidationLayers(enableValidationLayers) {
   if (enableValidationLayers && !checkValidationLayerSupport()) {
     throw std::runtime_error("validation layers requested, but not available!");
@@ -141,7 +141,7 @@ vInstance::vInstance(bool enableValidationLayers)
   }
 }
 
-vInstance::~vInstance() {
+Instance::~Instance() {
   if (enableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
   }
@@ -149,12 +149,12 @@ vInstance::~vInstance() {
   vkDestroyInstance(instance, nullptr);
 }
 
-const std::vector<const char *> &vInstance::getValidationLayers() const {
+const std::vector<const char *> &Instance::getValidationLayers() const {
   return validationLayers;
 }
 
-VkInstance vInstance::getInstance() const noexcept { return instance; }
+VkInstance Instance::getInstance() const noexcept { return instance; }
 
-VkDebugUtilsMessengerEXT vInstance::getDebugMessenger() const noexcept {
+VkDebugUtilsMessengerEXT Instance::getDebugMessenger() const noexcept {
   return debugMessenger;
 }
