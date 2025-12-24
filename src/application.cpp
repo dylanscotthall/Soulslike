@@ -1,5 +1,6 @@
 #include "application.h"
 #include "renderer/renderer.h"
+#include "renderer/uniforms.h"
 #include <vulkan/vulkan_core.h>
 
 Application::Application()
@@ -38,16 +39,33 @@ void Application::initVulkan() {
   mesh->indexCount = static_cast<uint32_t>(pipeline.indices.size());
   meshes.push_back(std::move(mesh));
 
-  RenderItem item{};
-  item.mesh = meshes.back().get();
-  item.transform = glm::mat4(1.0f);
+  auto item = std::make_unique<RenderItem>(device, command.getCommandPool());
+  item->mesh = meshes.back().get();
+  item->transform = glm::mat4(1.0f);
 
-  renderItems.push_back(item);
+  item->modelBuffer.create(sizeof(ModelUBO),
+                           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  item->descriptorSet = std::make_unique<DescriptorSet>(
+      device, pipeline.getDescriptorSetLayout(), frame.getMaxFramesInFlight());
+
+  for (uint32_t f = 0; f < frame.getMaxFramesInFlight(); f++) {
+    item->descriptorSet->update(f, item->modelBuffer.get(), sizeof(ModelUBO));
+  }
+
+  renderItems.push_back(std::move(item));
 }
 void Application::mainLoop() {
   while (!window.shouldClose()) {
     window.pollEvents();
-    RenderResult result = renderer.drawFrame(renderItems);
+    std::vector<RenderItem *> rawPtrs;
+    rawPtrs.reserve(renderItems.size());
+    for (auto &r : renderItems)
+      rawPtrs.push_back(r.get());
+    RenderResult result = renderer.drawFrame(rawPtrs);
 
     if (result == RenderResult::SwapchainOutOfDate ||
         window.getFrameBufferResized()) {

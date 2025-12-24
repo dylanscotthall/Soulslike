@@ -1,4 +1,5 @@
 #include "frame.h"
+#include "../../helper.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -21,26 +22,20 @@ Frame::Frame(Device &device, VkSwapchainKHR swapchain, int maxFramesInFlight)
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    if (vkCreateFence(device.getLogical(), &fenceInfo, nullptr,
-                      &inFlightFences[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create fence!");
-    }
+    VK_CHECK(vkCreateFence(device.getLogical(), &fenceInfo, nullptr,
+                           &inFlightFences[i]));
   }
 
   // image-available: per-frame
   for (size_t i = 0; i < imageAvailableSemaphores.size(); i++) {
-    if (vkCreateSemaphore(device.getLogical(), &semaphoreInfo, nullptr,
-                          &imageAvailableSemaphores[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create image-available semaphore!");
-    }
+    VK_CHECK(vkCreateSemaphore(device.getLogical(), &semaphoreInfo, nullptr,
+                               &imageAvailableSemaphores[i]));
   }
 
   // render-finished: per-image
   for (size_t i = 0; i < renderFinishedSemaphores.size(); i++) {
-    if (vkCreateSemaphore(device.getLogical(), &semaphoreInfo, nullptr,
-                          &renderFinishedSemaphores[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create render-finished semaphore!");
-    }
+    VK_CHECK(vkCreateSemaphore(device.getLogical(), &semaphoreInfo, nullptr,
+                               &renderFinishedSemaphores[i]));
   }
 }
 

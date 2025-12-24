@@ -1,4 +1,5 @@
 #include "swapchain.h"
+#include "../../helper.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -127,10 +128,8 @@ void Swapchain::createSwapchain(VkSurfaceKHR surface, Window &window) {
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(device.getLogical(), &createInfo, nullptr,
-                           &swapchain) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create swap chain!");
-  }
+  VK_CHECK(vkCreateSwapchainKHR(device.getLogical(), &createInfo, nullptr,
+                                &swapchain));
 
   vkGetSwapchainImagesKHR(device.getLogical(), swapchain, &imageCount, nullptr);
   swapchainImages.resize(imageCount);
@@ -172,10 +171,8 @@ void Swapchain::createImageViews() {
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device.getLogical(), &createInfo, nullptr,
-                          &swapchainImageViews[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create image views!");
-    }
+    VK_CHECK(vkCreateImageView(device.getLogical(), &createInfo, nullptr,
+                               &swapchainImageViews[i]));
   }
 }
 void Swapchain::createDepthResources() {
@@ -194,10 +191,8 @@ void Swapchain::createDepthResources() {
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  if (vkCreateImage(device.getLogical(), &imageInfo, nullptr, &depthImage) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create depth image");
-  }
+  VK_CHECK(
+      vkCreateImage(device.getLogical(), &imageInfo, nullptr, &depthImage));
 
   VkMemoryRequirements memReq;
   vkGetImageMemoryRequirements(device.getLogical(), depthImage, &memReq);
@@ -208,10 +203,8 @@ void Swapchain::createDepthResources() {
   allocInfo.memoryTypeIndex = device.findMemoryType(
       memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-  if (vkAllocateMemory(device.getLogical(), &allocInfo, nullptr,
-                       &depthMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate depth memory");
-  }
+  VK_CHECK(
+      vkAllocateMemory(device.getLogical(), &allocInfo, nullptr, &depthMemory));
 
   vkBindImageMemory(device.getLogical(), depthImage, depthMemory, 0);
 
@@ -226,10 +219,8 @@ void Swapchain::createDepthResources() {
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount = 1;
 
-  if (vkCreateImageView(device.getLogical(), &viewInfo, nullptr,
-                        &depthImageView) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create depth image view");
-  }
+  VK_CHECK(vkCreateImageView(device.getLogical(), &viewInfo, nullptr,
+                             &depthImageView));
 }
 
 Swapchain::~Swapchain() {}

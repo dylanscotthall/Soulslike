@@ -19,9 +19,11 @@ public:
 
   VkBuffer get() const noexcept { return buffer; }
   VkDeviceSize getSize() const noexcept { return size; }
+  VkDeviceMemory getMemory() const;
 
 private:
   void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+  void createUniformBuffer(VkDeviceSize size);
 
 private:
   VkCommandPool commandPool;

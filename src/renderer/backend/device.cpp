@@ -1,4 +1,5 @@
 #include "device.h"
+#include "../../helper.h"
 #include "swapchain.h"
 #include <set>
 #include <stdexcept>
@@ -148,11 +149,7 @@ Device::Device(const Instance &instance, VkSurfaceKHR surface,
   } else {
     createInfo.enabledLayerCount = 0;
   }
-
-  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create logical device!");
-  }
+  VK_CHECK(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
 
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);

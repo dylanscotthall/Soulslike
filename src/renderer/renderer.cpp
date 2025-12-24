@@ -1,4 +1,7 @@
 #include "renderer.h"
+#include "../helper.h"
+#include "uniforms.h"
+#include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -6,7 +9,7 @@ Renderer::Renderer(Device &device, Swapchain &swapchain, Command &command,
                    Frame &frame)
     : device(device), swapchain(swapchain), command(command), frame(frame) {}
 
-RenderResult Renderer::drawFrame(std::span<const RenderItem> items) {
+RenderResult Renderer::drawFrame(std::span<RenderItem *> items) {
   // Wait for the current frame to finish
   vkWaitForFences(device.getLogical(), 1, &frame.getInFlightFence(currentFrame),
                   VK_TRUE, UINT64_MAX);
@@ -38,8 +41,19 @@ RenderResult Renderer::drawFrame(std::span<const RenderItem> items) {
 
   // Record commands for this frame/image
   vkResetCommandBuffer(command.getCommandBuffers()[currentFrame], 0);
+
+  for (RenderItem *item : items) {
+    ModelUBO ubo{};
+    ubo.model = item->transform;
+    void *mapped;
+    vkMapMemory(device.getLogical(), item->modelBuffer.getMemory(), 0,
+                sizeof(ubo), 0, &mapped);
+    memcpy(mapped, &ubo, sizeof(ubo));
+    vkUnmapMemory(device.getLogical(), item->modelBuffer.getMemory());
+  }
+
   command.recordCommandBuffer(command.getCommandBuffers()[currentFrame],
-                              imageIndex, swapchain, items);
+                              imageIndex, swapchain, items, currentFrame);
 
   // Submit command buffer
   VkSemaphore waitSemaphores[] = {
@@ -59,10 +73,8 @@ RenderResult Renderer::drawFrame(std::span<const RenderItem> items) {
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  if (vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo,
-                    frame.getInFlightFence(currentFrame)) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to submit draw command buffer!");
-  }
+  VK_CHECK(vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo,
+                         frame.getInFlightFence(currentFrame)));
 
   // Present
   VkPresentInfoKHR presentInfo{};

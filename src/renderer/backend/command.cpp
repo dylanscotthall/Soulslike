@@ -1,4 +1,5 @@
 #include "command.h"
+#include "../../helper.h"
 #include "device.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -14,10 +15,7 @@ Command::Command(VkPhysicalDevice physicalDevice, VkDevice device,
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-  if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create command pool!");
-  }
+  VK_CHECK(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
 }
 
 void Command::createCommandBuffers(VkDevice device,
@@ -29,23 +27,17 @@ void Command::createCommandBuffers(VkDevice device,
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-  if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate command buffers!");
-  }
+  VK_CHECK(vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()));
 }
 
 void Command::recordCommandBuffer(VkCommandBuffer commandBuffer,
                                   uint32_t imageIndex, Swapchain &swapchain,
-                                  std::span<const RenderItem> items) {
+                                  std::span<RenderItem *> items,
+                                  uint32_t &currentFrame) {
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-  if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-    throw std::runtime_error("vkBeginCommandBuffer failed");
-  }
-
+  VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
   // --- Transition: UNDEFINED -> COLOR ATTACHMENT_OPTIMAL ---
   VkImageMemoryBarrier2 toAttachment{};
   toAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -125,8 +117,8 @@ void Command::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.extent = swapchain.getSwapchainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  for (const RenderItem &item : items) {
-    const Mesh &mesh = *item.mesh;
+  for (RenderItem *item : items) {
+    const Mesh &mesh = *item->mesh;
 
     VkBuffer vb = mesh.vertexBuffer.get();
     VkDeviceSize offsets[] = {0};
@@ -134,6 +126,10 @@ void Command::recordCommandBuffer(VkCommandBuffer commandBuffer,
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vb, offsets);
     vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.get(), 0,
                          VK_INDEX_TYPE_UINT32);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline.getPipelineLayout(), 0, 1,
+                            &item->descriptorSet->get(currentFrame), 0,
+                            nullptr);
 
     vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
   }
@@ -160,10 +156,7 @@ void Command::recordCommandBuffer(VkCommandBuffer commandBuffer,
   depInfo2.pImageMemoryBarriers = &toPresent;
 
   vkCmdPipelineBarrier2(commandBuffer, &depInfo2);
-
-  if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-    throw std::runtime_error("vkEndCommandBuffer failed");
-  }
+  VK_CHECK(vkEndCommandBuffer(commandBuffer));
 }
 std::vector<VkCommandBuffer> &Command::getCommandBuffers() noexcept {
   return commandBuffers;

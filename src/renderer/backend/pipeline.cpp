@@ -1,4 +1,5 @@
 #include "pipeline.h"
+#include "../../helper.h"
 #include <fstream>
 
 static std::vector<char> readFile(const std::string &filename) {
@@ -20,6 +21,13 @@ VkPipeline Pipeline::getGraphicsPipeline() const noexcept {
   return graphicsPipeline;
 }
 
+VkPipelineLayout Pipeline::getPipelineLayout() const noexcept {
+  return pipelineLayout;
+}
+VkDescriptorSetLayout Pipeline::getDescriptorSetLayout() const noexcept {
+  return descriptorSetLayout;
+}
+
 VkShaderModule Pipeline::createShaderModule(const std::vector<char> &code) {
   VkShaderModuleCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -27,10 +35,8 @@ VkShaderModule Pipeline::createShaderModule(const std::vector<char> &code) {
   createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
   VkShaderModule shaderModule;
-  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create shader module!");
-  }
+
+  VK_CHECK(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule));
 
   return shaderModule;
 }
@@ -124,15 +130,29 @@ Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
+  // In constructor, after creating pipeline layout:
+  VkDescriptorSetLayoutBinding uboLayoutBinding{};
+  uboLayoutBinding.binding = 0;
+  uboLayoutBinding.descriptorCount = 1;
+  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  uboLayoutBinding.pImmutableSamplers = nullptr;
+  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+  VkDescriptorSetLayoutCreateInfo layoutInfo{};
+  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  layoutInfo.bindingCount = 1;
+  layoutInfo.pBindings = &uboLayoutBinding;
+  VK_CHECK(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
+                                       &descriptorSetLayout));
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = 0;
+  pipelineLayoutInfo.setLayoutCount = 1;
+  pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-  if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-                             &pipelineLayout) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create pipeline layout!");
-  }
+  VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+                                  &pipelineLayout));
 
   VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
   pipelineRenderingInfo.sType =
@@ -174,10 +194,8 @@ Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
   pipelineInfo.basePipelineIndex = -1;              // Optional
   pipelineInfo.pNext = &pipelineRenderingInfo;
 
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &graphicsPipeline) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create graphics pipeline!");
-  }
+  VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                     nullptr, &graphicsPipeline));
 
   vkDestroyShaderModule(device, fragShaderModule, nullptr);
   vkDestroyShaderModule(device, vertShaderModule, nullptr);

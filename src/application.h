@@ -47,5 +47,5 @@ private:
   Frame frame;
   Renderer renderer;
   std::vector<std::unique_ptr<Mesh>> meshes;
-  std::vector<RenderItem> renderItems;
+  std::vector<std::unique_ptr<RenderItem>> renderItems;
 };

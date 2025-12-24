@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "../../helper.h"
 #include <cstring>
 #include <stdexcept>
 
@@ -23,11 +24,7 @@ void Buffer::create(VkDeviceSize bufferSize, VkBufferUsageFlags usage,
   bufferInfo.size = bufferSize;
   bufferInfo.usage = usage;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  if (vkCreateBuffer(device.getLogical(), &bufferInfo, nullptr, &buffer) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create buffer");
-  }
+  VK_CHECK(vkCreateBuffer(device.getLogical(), &bufferInfo, nullptr, &buffer));
 
   VkMemoryRequirements memReq;
   vkGetBufferMemoryRequirements(device.getLogical(), buffer, &memReq);
@@ -38,12 +35,16 @@ void Buffer::create(VkDeviceSize bufferSize, VkBufferUsageFlags usage,
   allocInfo.memoryTypeIndex =
       device.findMemoryType(memReq.memoryTypeBits, properties);
 
-  if (vkAllocateMemory(device.getLogical(), &allocInfo, nullptr, &memory) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate buffer memory");
-  }
+  VK_CHECK(vkAllocateMemory(device.getLogical(), &allocInfo, nullptr, &memory));
 
   vkBindBufferMemory(device.getLogical(), buffer, memory, 0);
+}
+
+void Buffer::createUniformBuffer(VkDeviceSize size) {
+  create(size,
+         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void Buffer::uploadViaStaging(const void *srcData, VkDeviceSize dataSize) {
@@ -96,3 +97,5 @@ void Buffer::copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize copySize) {
 
   vkFreeCommandBuffers(device.getLogical(), commandPool, 1, &cmd);
 }
+
+VkDeviceMemory Buffer::getMemory() const { return memory; }

@@ -1,4 +1,5 @@
 #include "instance.h"
+#include "../../helper.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <cstring>
@@ -81,11 +82,8 @@ void Instance::setupDebugMessenger() {
     return;
   VkDebugUtilsMessengerCreateInfoEXT createInfo;
   populateDebugMessengerCreateInfo(createInfo);
-
-  if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr,
-                                   &debugMessenger) != VK_SUCCESS) {
-    throw std::runtime_error("failed to set up debug messenger!");
-  }
+  VK_CHECK(CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr,
+                                        &debugMessenger));
 }
 
 Instance::Instance(bool enableValidationLayers)
@@ -132,9 +130,7 @@ Instance::Instance(bool enableValidationLayers)
     createInfo.pNext = nullptr;
   }
 
-  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create instance!");
-  }
+  VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
 
   if (enableValidationLayers) {
     setupDebugMessenger();

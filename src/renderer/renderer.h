@@ -15,7 +15,7 @@ public:
            Frame &frame);
   ~Renderer();
 
-  RenderResult drawFrame(std::span<const RenderItem> items);
+  RenderResult drawFrame(std::span<RenderItem *> items);
 
 private:
   Device &device;
