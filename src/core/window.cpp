@@ -1,4 +1,4 @@
-#include "window.h"
+#include "core/window.h"
 #include <GLFW/glfw3.h>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -24,6 +24,11 @@ std::pair<int, int> Window::framebufferSize() const noexcept {
 
 bool Window::shouldClose() const noexcept {
   return glfwWindowShouldClose(window);
+}
+
+float Window::getAspectRatio() const noexcept {
+  auto [w, h] = framebufferSize();
+  return static_cast<float>(w) / static_cast<float>(h);
 }
 
 GLFWwindow *Window::getWindow() const noexcept { return window; }

@@ -19,15 +19,16 @@ find_package(glfw3 CONFIG REQUIRED)
 file(COPY shaders DESTINATION ${CMAKE_BINARY_DIR})
 
 # Main executable
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/core/main.cpp)
 
-file(GLOB_RECURSE RENDERER_SRC "src/renderer/*.cpp"
-     "src/renderer/backend/*.cpp")
+file(GLOB_RECURSE RENDERER_SRC "src/renderer/*.cpp")
+file(GLOB_RECURSE RHI_VK_SRC "src/rhi/vulkan/*.cpp")
+file(GLOB_RECURSE CORE_SRC "src/core/*.cpp")
 file(GLOB_RECURSE GAME_SRC "src/game/*.cpp")
 file(GLOB_RECURSE SCENE_SRC "src/scene/*.cpp")
 
-target_sources(${PROJECT_NAME} PRIVATE src/application.cpp src/main.cpp
-                                       ${RENDERER_SRC} ${GAME_SRC} ${SCENE_SRC})
+target_sources(${PROJECT_NAME} PRIVATE ${RENDERER_SRC} ${RHI_VK_SRC}
+                                       ${CORE_SRC} ${GAME_SRC} ${SCENE_SRC})
 
 # target_sources( ${PROJECT_NAME} PRIVATE src/vulkan/vk_device.cpp
 # src/vulkan/vk_instance.cpp src/vulkan/vk_surface.cpp
@@ -35,8 +36,8 @@ target_sources(${PROJECT_NAME} PRIVATE src/application.cpp src/main.cpp
 # src/vulkan/vk_framebuffers.cpp src/vulkan/vk_renderpass.cpp
 # src/vulkan/vk_buffer.cpp)
 
-# Include directories target_include_directories(${PROJECT_NAME} PRIVATE include
-# shaders src)
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw)

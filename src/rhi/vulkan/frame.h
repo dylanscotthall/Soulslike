@@ -1,7 +1,6 @@
 #pragma once
 
-#include "command.h"
-#include "swapchain.h"
+#include "rhi/vulkan/device.h"
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -19,11 +18,11 @@ public:
   // const std::vector<VkSemaphore> &getImageAvailableSemaphores() const;
 
   const VkFence &getInFlightFence(uint32_t index) const;
-  const VkFence &getImageInFlight(uint32_t index) const;
+  VkFence &getImageInFlight(uint32_t index);
   const VkSemaphore &getRenderFinishedSemaphore(uint32_t index) const;
   const VkSemaphore &getImageAvailableSemaphore(uint32_t index) const;
 
-  void setImagesInFlight(uint32_t imageIndex, VkFence fence);
+  void setImageInFlight(uint32_t imageIndex, VkFence fence);
 
 private:
   Device &device;

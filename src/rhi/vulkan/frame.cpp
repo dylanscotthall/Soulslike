@@ -1,6 +1,5 @@
-#include "frame.h"
-#include "../../helper.h"
-#include <stdexcept>
+#include "rhi/vulkan/frame.h"
+#include "helper.h"
 #include <vulkan/vulkan_core.h>
 
 Frame::Frame(Device &device, VkSwapchainKHR swapchain, int maxFramesInFlight)
@@ -9,7 +8,6 @@ Frame::Frame(Device &device, VkSwapchainKHR swapchain, int maxFramesInFlight)
   uint32_t imageCount = 0;
   vkGetSwapchainImagesKHR(device.getLogical(), swapchain, &imageCount, nullptr);
   imagesInFlight.resize(imageCount, VK_NULL_HANDLE);
-
   imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
   renderFinishedSemaphores.resize(imageCount);
   inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -42,7 +40,7 @@ Frame::Frame(Device &device, VkSwapchainKHR swapchain, int maxFramesInFlight)
 const VkFence &Frame::getInFlightFence(uint32_t index) const {
   return inFlightFences[index];
 }
-const VkFence &Frame::getImageInFlight(uint32_t index) const {
+VkFence &Frame::getImageInFlight(uint32_t index) {
   return imagesInFlight[index];
 }
 const VkSemaphore &Frame::getRenderFinishedSemaphore(uint32_t index) const {
@@ -52,7 +50,7 @@ const VkSemaphore &Frame::getImageAvailableSemaphore(uint32_t index) const {
   return imageAvailableSemaphores[index];
 }
 
-void Frame::setImagesInFlight(uint32_t imageIndex, VkFence fence) {
+void Frame::setImageInFlight(uint32_t imageIndex, VkFence fence) {
   imagesInFlight[imageIndex] = fence;
 }
 Frame::~Frame() {

@@ -20,6 +20,8 @@ public:
   void pollEvents() const noexcept;
   void waitEvents() const noexcept;
 
+  float getAspectRatio() const noexcept;
+
   std::vector<const char *>
   getRequiredExtensions(bool enabledValidationLayer) const;
   std::pair<int, int> framebufferSize() const noexcept;

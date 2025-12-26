@@ -1,8 +1,7 @@
-#include "swapchain.h"
-#include "../../helper.h"
+#include "rhi/vulkan/swapchain.h"
+#include "helper.h"
 #include <algorithm>
 #include <limits>
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 SwapchainSupportDetails
@@ -223,7 +222,7 @@ void Swapchain::createDepthResources() {
                              &depthImageView));
 }
 
-Swapchain::~Swapchain() {}
+Swapchain::~Swapchain() { cleanupSwapChain(); }
 
 void Swapchain::cleanupSwapChain() {
   for (auto imageView : swapchainImageViews) {

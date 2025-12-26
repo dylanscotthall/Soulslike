@@ -1,7 +1,6 @@
-#include "buffer.h"
-#include "../../helper.h"
+#include "rhi/vulkan/buffer.h"
+#include "helper.h"
 #include <cstring>
-#include <stdexcept>
 
 Buffer::Buffer(Device &device, VkCommandPool commandPool)
     : device(device), commandPool(commandPool) {}
@@ -14,7 +13,12 @@ Buffer::~Buffer() {
     vkFreeMemory(device.getLogical(), memory, nullptr);
   }
 }
-
+void Buffer::upload(const void *data, VkDeviceSize dataSize) {
+  void *mapped;
+  vkMapMemory(device.getLogical(), memory, 0, dataSize, 0, &mapped);
+  std::memcpy(mapped, data, static_cast<size_t>(dataSize));
+  vkUnmapMemory(device.getLogical(), memory);
+}
 void Buffer::create(VkDeviceSize bufferSize, VkBufferUsageFlags usage,
                     VkMemoryPropertyFlags properties) {
   size = bufferSize;
@@ -97,5 +101,3 @@ void Buffer::copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize copySize) {
 
   vkFreeCommandBuffers(device.getLogical(), commandPool, 1, &cmd);
 }
-
-VkDeviceMemory Buffer::getMemory() const { return memory; }

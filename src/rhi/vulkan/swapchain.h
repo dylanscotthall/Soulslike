@@ -1,6 +1,6 @@
 #pragma once
-#include "device.h"
-#include "window.h"
+#include "core/window.h"
+#include "rhi/vulkan/device.h"
 #include <vector>
 #include <vulkan/vulkan_core.h>
 

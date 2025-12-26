@@ -1,9 +1,9 @@
 #pragma once
 #include <glm/glm.hpp>
 
-struct CameraUBO {
-  glm::mat4 view;
-  glm::mat4 proj;
+struct alignas(16) CameraUBO {
+  alignas(16) glm::mat4 view;
+  alignas(16) glm::mat4 proj;
 };
 
 struct ModelUBO {

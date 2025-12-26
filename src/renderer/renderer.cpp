@@ -1,103 +1,81 @@
-#include "renderer.h"
-#include "../helper.h"
-#include "uniforms.h"
-#include <cstring>
-#include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include "renderer/renderer.h"
+#include "helper.h"
+#include "rhi/vulkan/commandContext.h"
+#include "rhi/vulkan/device.h"
+#include "rhi/vulkan/renderRecorder.h"
+#include "rhi/vulkan/swapchain.h"
 
-Renderer::Renderer(Device &device, Swapchain &swapchain, Command &command,
+Renderer::Renderer(Device &device, Swapchain &swapchain,
+                   CommandContext &commands, RenderRecorder &recorder,
                    Frame &frame)
-    : device(device), swapchain(swapchain), command(command), frame(frame) {}
+    : device(device), swapchain(swapchain), commands(commands),
+      recorder(recorder), frame(frame) {}
 
-RenderResult Renderer::drawFrame(std::span<RenderItem *> items) {
-  // Wait for the current frame to finish
-  vkWaitForFences(device.getLogical(), 1, &frame.getInFlightFence(currentFrame),
-                  VK_TRUE, UINT64_MAX);
+RenderResult Renderer::drawFrame(std::span<RenderItem *> items,
+                                 Camera &camera) {
+  auto &fence = frame.getInFlightFence(currentFrame);
+  vkWaitForFences(device.getLogical(), 1, &fence, VK_TRUE, UINT64_MAX);
 
-  // Acquire next image
   uint32_t imageIndex;
-  VkResult result = vkAcquireNextImageKHR(
+  VkResult res = vkAcquireNextImageKHR(
       device.getLogical(), swapchain.getSwapchain(), UINT64_MAX,
-      frame.getImageAvailableSemaphore(currentFrame), // use semaphore for
-                                                      // this frame
-      VK_NULL_HANDLE, &imageIndex);
+      frame.getImageAvailableSemaphore(currentFrame), VK_NULL_HANDLE,
+      &imageIndex);
 
-  if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+  if (res == VK_ERROR_OUT_OF_DATE_KHR)
     return RenderResult::SwapchainOutOfDate;
-  } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-    throw std::runtime_error("Failed to acquire swapchain image!");
-  }
+
+  if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
+    return RenderResult::FatalError;
 
   // Wait if this image is already in flight
-  if (frame.getImageInFlight(imageIndex) != VK_NULL_HANDLE) {
-    vkWaitForFences(device.getLogical(), 1, &frame.getImageInFlight(imageIndex),
-                    VK_TRUE, UINT64_MAX);
+  VkFence &imageFence = frame.getImageInFlight(imageIndex);
+  if (imageFence != VK_NULL_HANDLE) {
+    vkWaitForFences(device.getLogical(), 1, &imageFence, VK_TRUE, UINT64_MAX);
   }
 
-  // Mark image as now being in use by this frame
-  frame.setImagesInFlight(imageIndex, frame.getInFlightFence(currentFrame));
+  // Mark image as now using this frame's fence
+  frame.setImageInFlight(imageIndex, fence);
 
-  vkResetFences(device.getLogical(), 1, &frame.getInFlightFence(currentFrame));
+  vkResetFences(device.getLogical(), 1, &fence);
 
-  // Record commands for this frame/image
-  vkResetCommandBuffer(command.getCommandBuffers()[currentFrame], 0);
+  VkCommandBuffer cmd = commands.get(currentFrame);
+  vkResetCommandBuffer(cmd, 0);
 
-  for (RenderItem *item : items) {
-    ModelUBO ubo{};
-    ubo.model = item->transform;
-    void *mapped;
-    vkMapMemory(device.getLogical(), item->modelBuffer.getMemory(), 0,
-                sizeof(ubo), 0, &mapped);
-    memcpy(mapped, &ubo, sizeof(ubo));
-    vkUnmapMemory(device.getLogical(), item->modelBuffer.getMemory());
-  }
+  camera.update(currentFrame);
 
-  command.recordCommandBuffer(command.getCommandBuffers()[currentFrame],
-                              imageIndex, swapchain, items, currentFrame);
+  recorder.record(cmd, swapchain, imageIndex, currentFrame, items, camera);
 
-  // Submit command buffer
-  VkSemaphore waitSemaphores[] = {
-      frame.getImageAvailableSemaphore(currentFrame)};
-  VkPipelineStageFlags waitStages[] = {
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  VkSemaphore signalSemaphores[] = {
-      frame.getRenderFinishedSemaphore(imageIndex)};
+  VkPipelineStageFlags waitStage =
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = waitSemaphores;
-  submitInfo.pWaitDstStageMask = waitStages;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &command.getCommandBuffers()[currentFrame];
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = signalSemaphores;
+  VkSubmitInfo submit{};
+  submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit.waitSemaphoreCount = 1;
+  submit.pWaitSemaphores = &frame.getImageAvailableSemaphore(currentFrame);
+  submit.pWaitDstStageMask = &waitStage;
+  submit.commandBufferCount = 1;
+  submit.pCommandBuffers = &cmd;
+  submit.signalSemaphoreCount = 1;
+  submit.pSignalSemaphores = &frame.getRenderFinishedSemaphore(imageIndex);
 
-  VK_CHECK(vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo,
-                         frame.getInFlightFence(currentFrame)));
+  VK_CHECK(vkQueueSubmit(device.getGraphicsQueue(), 1, &submit, fence));
 
-  // Present
-  VkPresentInfoKHR presentInfo{};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = signalSemaphores;
-  VkSwapchainKHR swapchains[] = {swapchain.getSwapchain()};
-  presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = swapchains;
-  presentInfo.pImageIndices = &imageIndex;
-  presentInfo.pResults = nullptr;
+  VkPresentInfoKHR present{};
+  present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  present.waitSemaphoreCount = 1;
+  present.pWaitSemaphores = &frame.getRenderFinishedSemaphore(imageIndex);
+  present.swapchainCount = 1;
+  VkSwapchainKHR sc = swapchain.getSwapchain();
+  present.pSwapchains = &sc;
+  present.pImageIndices = &imageIndex;
 
-  result = vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
-
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-    return RenderResult::SwapchainOutOfDate;
-  }
-  if (result != VK_SUCCESS) {
-    return RenderResult::FatalError;
-  }
+  res = vkQueuePresentKHR(device.getPresentQueue(), &present);
 
   currentFrame = (currentFrame + 1) % frame.getMaxFramesInFlight();
-  return RenderResult::Ok;
-}
 
-Renderer::~Renderer() {}
+  if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
+    return RenderResult::SwapchainOutOfDate;
+
+  return res == VK_SUCCESS ? RenderResult::Ok : RenderResult::FatalError;
+}

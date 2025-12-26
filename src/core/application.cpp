@@ -1,4 +1,4 @@
-#include "application.h"
+#include "core/application.h"
 #include "renderer/renderer.h"
 #include "renderer/uniforms.h"
 #include <vulkan/vulkan_core.h>
@@ -9,17 +9,24 @@ Application::Application()
       device(instance, surface.get(), enableValidationLayers),
       swapchain(device, surface.get(), window),
       pipeline(device.getLogical(), swapchain.getSwapchainImageFormat()),
-      command(device.getPhysical(), device.getLogical(), surface.get(),
-              pipeline),
-      frame(device, swapchain.getSwapchain()),
-      renderer(device, swapchain, command, frame) {
+      commandContext(device.getPhysical(), device.getLogical(), surface.get()),
+      recorder(pipeline), frame(device, swapchain.getSwapchain()),
+      renderer(device, swapchain, commandContext, recorder, frame) {
   initVulkan();
 }
 void Application::initVulkan() {
-  command.createCommandBuffers(device.getLogical(),
-                               frame.getMaxFramesInFlight());
+  commandContext.allocate(frame.getMaxFramesInFlight());
 
-  auto mesh = std::make_unique<Mesh>(device, command.getCommandPool());
+  // --- Camera FIRST ---
+  camera = std::make_unique<Camera>(device, commandContext.getPool(),
+                                    frame.getMaxFramesInFlight());
+
+  camera->setPerspective(45.0f, window.getAspectRatio(), 0.1f, 100.0f);
+  camera->setPosition({1.0f, 1.0f, 5.0f});
+  camera->lookAt({0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
+
+  // --- Mesh ---
+  auto mesh = std::make_unique<Mesh>(device, commandContext.getPool());
 
   VkDeviceSize vbSize = sizeof(Vertex) * pipeline.vertices.size();
   VkDeviceSize ibSize = sizeof(uint32_t) * pipeline.indices.size();
@@ -39,13 +46,12 @@ void Application::initVulkan() {
   mesh->indexCount = static_cast<uint32_t>(pipeline.indices.size());
   meshes.push_back(std::move(mesh));
 
-  auto item = std::make_unique<RenderItem>(device, command.getCommandPool());
+  // --- RenderItem ---
+  auto item = std::make_unique<RenderItem>(device, commandContext.getPool());
   item->mesh = meshes.back().get();
   item->transform = glm::mat4(1.0f);
 
-  item->modelBuffer.create(sizeof(ModelUBO),
-                           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-                               VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+  item->modelBuffer.create(sizeof(ModelUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -53,7 +59,8 @@ void Application::initVulkan() {
       device, pipeline.getDescriptorSetLayout(), frame.getMaxFramesInFlight());
 
   for (uint32_t f = 0; f < frame.getMaxFramesInFlight(); f++) {
-    item->descriptorSet->update(f, item->modelBuffer.get(), sizeof(ModelUBO));
+    item->descriptorSet->update(f, camera->getBuffer(), sizeof(CameraUBO),
+                                item->modelBuffer.get(), sizeof(ModelUBO));
   }
 
   renderItems.push_back(std::move(item));
@@ -65,7 +72,7 @@ void Application::mainLoop() {
     rawPtrs.reserve(renderItems.size());
     for (auto &r : renderItems)
       rawPtrs.push_back(r.get());
-    RenderResult result = renderer.drawFrame(rawPtrs);
+    RenderResult result = renderer.drawFrame(rawPtrs, *camera);
 
     if (result == RenderResult::SwapchainOutOfDate ||
         window.getFrameBufferResized()) {
@@ -79,4 +86,4 @@ void Application::mainLoop() {
   vkDeviceWaitIdle(device.getLogical());
 }
 
-Application::~Application() { swapchain.cleanupSwapChain(); }
+Application::~Application() {}

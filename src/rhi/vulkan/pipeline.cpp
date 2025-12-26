@@ -1,5 +1,5 @@
-#include "pipeline.h"
-#include "../../helper.h"
+#include "rhi/vulkan/pipeline.h"
+#include "helper.h"
 #include <fstream>
 
 static std::vector<char> readFile(const std::string &filename) {
@@ -96,7 +96,7 @@ Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
   rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
   rasterizer.lineWidth = 1.0f;
   rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-  rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rasterizer.depthBiasEnable = VK_FALSE;
 
   VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -130,18 +130,26 @@ Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
-  // In constructor, after creating pipeline layout:
-  VkDescriptorSetLayoutBinding uboLayoutBinding{};
-  uboLayoutBinding.binding = 0;
-  uboLayoutBinding.descriptorCount = 1;
-  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  uboLayoutBinding.pImmutableSamplers = nullptr;
-  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  VkDescriptorSetLayoutBinding uboLayoutBindings[2]{};
+
+  // Binding 0: probably your existing uniform (camera / other)
+  uboLayoutBindings[0].binding = 0;
+  uboLayoutBindings[0].descriptorCount = 1;
+  uboLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  uboLayoutBindings[0].pImmutableSamplers = nullptr;
+  uboLayoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+  // Binding 1: model matrix uniform (the one your shader is complaining about)
+  uboLayoutBindings[1].binding = 1;
+  uboLayoutBindings[1].descriptorCount = 1;
+  uboLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  uboLayoutBindings[1].pImmutableSamplers = nullptr;
+  uboLayoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = 1;
-  layoutInfo.pBindings = &uboLayoutBinding;
+  layoutInfo.bindingCount = 2;
+  layoutInfo.pBindings = uboLayoutBindings;
   VK_CHECK(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
                                        &descriptorSetLayout));
 
@@ -202,6 +210,15 @@ Pipeline::Pipeline(VkDevice device, VkFormat swapchainImageFormat)
 }
 
 Pipeline::~Pipeline() {
-  vkDestroyPipeline(device, graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  if (graphicsPipeline != VK_NULL_HANDLE) {
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+  }
+
+  if (pipelineLayout != VK_NULL_HANDLE) {
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  }
+
+  if (descriptorSetLayout != VK_NULL_HANDLE) {
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+  }
 }
